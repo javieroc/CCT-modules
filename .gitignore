@@ -2,6 +2,7 @@
 *.E01
 *.docx
 *.pptx
+*.xlsx
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
