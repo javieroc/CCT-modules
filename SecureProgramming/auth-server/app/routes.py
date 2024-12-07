@@ -1,3 +1,4 @@
+import uuid
 from flask import Blueprint, request, jsonify, render_template, redirect
 from flask_jwt_extended import (
     create_access_token,
@@ -6,6 +7,7 @@ from flask_jwt_extended import (
 )
 from .helpers import validate_password, hash_password, check_password, generate_random_string
 from .database import db, User
+from .cache import redis_client
 
 routes_bp = Blueprint('routes', __name__, template_folder='templates')
 
@@ -59,9 +61,8 @@ def credentials():
         return jsonify({"msg": "Invalid username or password"}), 401
 
 
-    short_lived_token = generate_random_string(10)
-    user.short_lived_token = short_lived_token
-    db.session.commit()
+    short_lived_token = str(uuid.uuid4())
+    redis_client.setex(f"token:{short_lived_token}", 600, user.username)  # 600 seconds = 10 minutes
     redirect_url += "?short_lived_token=" + short_lived_token
     return redirect(redirect_url)
 
@@ -69,11 +70,11 @@ def credentials():
 @routes_bp.get("/access_token")
 def get_access_token():
     short_lived_token = request.args.get("short_lived_token", "")
-    user = db.session.execute(db.select(User).filter_by(short_lived_token=short_lived_token)).scalar_one_or_none()
-    if not user:
+    username = redis_client.get(f"token:{short_lived_token}")
+    if not username:
         return jsonify({"msg": "Invalid Token!"}), 401
 
-    access_token = create_access_token(identity=user.username)
+    access_token = create_access_token(identity=username)
     return jsonify({"access_token": access_token}), 200
 
 
