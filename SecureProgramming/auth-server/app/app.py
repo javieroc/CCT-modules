@@ -5,13 +5,11 @@ from .database import db
 
 def create_app():
     app = Flask(__name__)
-    jwt = JWTManager(app)
-    app.config["JWT_SECRET_KEY"] = "your_jwt_secret_key"
-    app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://admin:admin@postgres-db:5432/cctdb"
+    JWTManager(app)
+    app.config.from_pyfile('config.py')
 
     db.init_app(app)
 
-    # app.config.from_pyfile('config.py')
 
     with app.app_context():
         app.register_blueprint(routes_bp)
